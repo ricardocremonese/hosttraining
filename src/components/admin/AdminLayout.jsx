@@ -51,9 +51,9 @@ export default function AdminLayout() {
   const pendingCount = orders.length;
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 bg-foreground text-primary-foreground flex flex-col flex-shrink-0">
+      <aside className="w-60 bg-foreground text-primary-foreground flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="p-6 border-b border-neutral-800">
           <Link to="/admin" className="flex items-center gap-2">
             <Logo className="h-6" variant="white" />
@@ -192,7 +192,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-nike-lightgray min-h-screen overflow-y-auto">
+      <main className="flex-1 bg-nike-lightgray h-screen overflow-y-auto">
         <div className="p-8">
           <Outlet />
         </div>
