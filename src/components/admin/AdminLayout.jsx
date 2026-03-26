@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight, MessageCircle, Cake } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight, MessageCircle, Cake, BarChart3, Eye, TrendingDown, DollarSign } from 'lucide-react';
 import Logo from '../store/NikeLogo';
 
 const navItems = [
@@ -25,10 +25,22 @@ const marketingItems = [
   { label: 'IA Conteúdo', href: '/admin/marketing/ai', icon: Sparkles },
 ];
 
+const analyticsItems = [
+  { label: 'Visitas', href: '/admin/analytics/views', icon: Eye },
+];
+
+const salesItems = [
+  { label: 'Downsell', href: '/admin/sales/downsell', icon: TrendingDown },
+];
+
 export default function AdminLayout() {
   const location = useLocation();
   const isMarketingActive = location.pathname.startsWith('/admin/marketing');
+  const isAnalyticsActive = location.pathname.startsWith('/admin/analytics');
+  const isSalesActive = location.pathname.startsWith('/admin/sales');
   const [marketingOpen, setMarketingOpen] = useState(isMarketingActive);
+  const [analyticsOpen, setAnalyticsOpen] = useState(isAnalyticsActive);
+  const [salesOpen, setSalesOpen] = useState(isSalesActive);
 
   const { data: orders = [] } = useQuery({
     queryKey: ['admin-orders-sidebar'],
@@ -98,6 +110,70 @@ export default function AdminLayout() {
                         active ? 'bg-white/10 text-white font-medium' : 'text-neutral-500 hover:text-white hover:bg-white/5'
                       }`}
                     >
+                      <item.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Analytics Submenu */}
+          <div className="pt-1">
+            <button
+              onClick={() => setAnalyticsOpen(!analyticsOpen)}
+              className={`flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors ${
+                isAnalyticsActive ? 'bg-white/10 text-white font-medium' : 'text-neutral-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <BarChart3 className="w-4 h-4" strokeWidth={1.5} />
+                Analytics
+              </span>
+              {analyticsOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+            {analyticsOpen && (
+              <div className="ml-4 border-l border-neutral-700 pl-3 mt-1 space-y-0.5">
+                {analyticsItems.map(item => {
+                  const active = location.pathname === item.href;
+                  return (
+                    <Link key={item.href} to={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                        active ? 'bg-white/10 text-white font-medium' : 'text-neutral-500 hover:text-white hover:bg-white/5'
+                      }`}>
+                      <item.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Sales Submenu */}
+          <div className="pt-1">
+            <button
+              onClick={() => setSalesOpen(!salesOpen)}
+              className={`flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors ${
+                isSalesActive ? 'bg-white/10 text-white font-medium' : 'text-neutral-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <DollarSign className="w-4 h-4" strokeWidth={1.5} />
+                Vendas
+              </span>
+              {salesOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+            {salesOpen && (
+              <div className="ml-4 border-l border-neutral-700 pl-3 mt-1 space-y-0.5">
+                {salesItems.map(item => {
+                  const active = location.pathname === item.href;
+                  return (
+                    <Link key={item.href} to={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                        active ? 'bg-white/10 text-white font-medium' : 'text-neutral-500 hover:text-white hover:bg-white/5'
+                      }`}>
                       <item.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                       {item.label}
                     </Link>

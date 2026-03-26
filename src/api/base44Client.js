@@ -14,6 +14,8 @@ const tableMap = {
   Coupon: 'coupons',
   Campaign: 'campaigns',
   AbandonedCart: 'abandoned_carts',
+  ProductView: 'product_views',
+  Downsell: 'downsells',
 };
 
 const createEntityAPI = (entityName) => {
@@ -114,6 +116,8 @@ export const base44 = {
     Coupon: createEntityAPI('Coupon'),
     Campaign: createEntityAPI('Campaign'),
     AbandonedCart: createEntityAPI('AbandonedCart'),
+    ProductView: createEntityAPI('ProductView'),
+    Downsell: createEntityAPI('Downsell'),
   },
   integrations: {
     Core: {

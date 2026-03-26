@@ -192,6 +192,37 @@ CREATE TABLE IF NOT EXISTS abandoned_carts (
 );
 
 -- ===================
+-- TABELA: product_views (rastreamento de visitas)
+-- ===================
+CREATE TABLE IF NOT EXISTS product_views (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL,
+  product_name TEXT,
+  session_id TEXT,
+  created_date TIMESTAMPTZ DEFAULT now()
+);
+
+-- ===================
+-- TABELA: downsells
+-- ===================
+CREATE TABLE IF NOT EXISTS downsells (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  trigger_product_id UUID,
+  trigger_category TEXT,
+  trigger_min_price NUMERIC(10,2) DEFAULT 0,
+  offer_product_id UUID NOT NULL,
+  offer_title TEXT,
+  offer_description TEXT,
+  discount_percent NUMERIC(5,2) DEFAULT 0,
+  active BOOLEAN DEFAULT true,
+  display_count INTEGER DEFAULT 0,
+  conversion_count INTEGER DEFAULT 0,
+  created_date TIMESTAMPTZ DEFAULT now(),
+  updated_date TIMESTAMPTZ DEFAULT now()
+);
+
+-- ===================
 -- INDEXES
 -- ===================
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
@@ -213,6 +244,9 @@ CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
 CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(active);
 CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
 CREATE INDEX IF NOT EXISTS idx_abandoned_carts_recovered ON abandoned_carts(recovered);
+CREATE INDEX IF NOT EXISTS idx_product_views_product_id ON product_views(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_views_created ON product_views(created_date);
+CREATE INDEX IF NOT EXISTS idx_downsells_active ON downsells(active);
 
 -- ===================
 -- RLS (Row Level Security)
@@ -230,6 +264,8 @@ ALTER TABLE integrations_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE abandoned_carts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE downsells ENABLE ROW LEVEL SECURITY;
 
 -- Products: leitura pública, escrita pública
 CREATE POLICY "products_select" ON products FOR SELECT USING (true);
@@ -284,6 +320,12 @@ CREATE POLICY "abandoned_carts_select" ON abandoned_carts FOR SELECT USING (true
 CREATE POLICY "abandoned_carts_insert" ON abandoned_carts FOR INSERT WITH CHECK (true);
 CREATE POLICY "abandoned_carts_update" ON abandoned_carts FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "abandoned_carts_delete" ON abandoned_carts FOR DELETE USING (true);
+
+-- Product Views
+CREATE POLICY "product_views_all" ON product_views FOR ALL USING (true) WITH CHECK (true);
+
+-- Downsells
+CREATE POLICY "downsells_all" ON downsells FOR ALL USING (true) WITH CHECK (true);
 
 -- Editorials: leitura pública, escrita pública
 CREATE POLICY "editorials_select" ON editorials FOR SELECT USING (true);

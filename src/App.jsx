@@ -32,6 +32,8 @@ import FollowUp from './pages/admin/marketing/FollowUp';
 import AIContent from './pages/admin/marketing/AIContent';
 import WhatsAppMarketing from './pages/admin/marketing/WhatsApp';
 import Birthdays from './pages/admin/marketing/Birthdays';
+import ProductViews from './pages/admin/analytics/ProductViews';
+import DownsellPage from './pages/admin/sales/Downsell';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -83,6 +85,8 @@ const AuthenticatedApp = () => {
           <Route path="/admin/marketing/ai" element={<AIContent />} />
           <Route path="/admin/marketing/whatsapp" element={<WhatsAppMarketing />} />
           <Route path="/admin/marketing/birthdays" element={<Birthdays />} />
+          <Route path="/admin/analytics/views" element={<ProductViews />} />
+          <Route path="/admin/sales/downsell" element={<DownsellPage />} />
         </Route>
 
         <Route path="*" element={<PageNotFound />} />

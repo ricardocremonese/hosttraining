@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Heart, Minus, Plus } from 'lucide-react';
@@ -47,6 +47,22 @@ export default function ProductDetail() {
     const others = otherProducts.filter(p => p.id !== product?.id && !sameCategory.find(s => s.id === p.id));
     return [...sameCategory, ...others];
   })();
+
+  // Rastrear visita ao produto
+  useEffect(() => {
+    if (product?.id) {
+      const sessionId = sessionStorage.getItem('session_id') || (() => {
+        const id = crypto.randomUUID();
+        sessionStorage.setItem('session_id', id);
+        return id;
+      })();
+      base44.entities.ProductView.create({
+        product_id: product.id,
+        product_name: product.name,
+        session_id: sessionId,
+      }).catch(() => {});
+    }
+  }, [product?.id]);
 
   if (isLoading) {
     return (

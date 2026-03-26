@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [compareEnabled, setCompareEnabled] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(now.toISOString().split('T')[0]);
 
   const { data: products = [] } = useQuery({
     queryKey: ['admin-products'],
@@ -54,6 +55,18 @@ export default function Dashboard() {
   const cancelledTotal = cancelledOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalOrdersMonth = monthOrders.length;
   const lowStockProducts = products.filter(p => (p.stock || 0) < 5);
+
+  // Vendas do dia selecionado
+  const dayOrders = useMemo(() => {
+    return allOrders.filter(o => {
+      const d = new Date(o.created_date).toISOString().split('T')[0];
+      return d === selectedDate;
+    });
+  }, [allOrders, selectedDate]);
+
+  const dayPaid = dayOrders.filter(o => paidStatuses.includes(o.status));
+  const dayRevenue = dayPaid.reduce((sum, o) => sum + (o.total || 0), 0);
+  const dayCancelled = dayOrders.filter(o => o.status === 'cancelled').length;
 
   // Receita total geral (todos os meses, apenas pagos)
   const totalRevenueAll = allOrders
@@ -228,6 +241,49 @@ export default function Dashboard() {
           <AlertTriangle className="w-5 h-5 text-orange-500 mb-3" strokeWidth={1.5} />
           <p className="text-xl font-bold">{lowStockProducts.length}</p>
           <p className="text-[10px] text-muted-foreground mt-1">Estoque Baixo</p>
+        </div>
+      </div>
+
+      {/* Daily Filter */}
+      <div className="bg-white border border-border p-5 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="block text-[10px] text-muted-foreground mb-1">Filtro Diário</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                max={now.toISOString().split('T')[0]}
+                className="border border-border px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+            </div>
+            <div className="h-10 w-px bg-border" />
+            <div>
+              <p className="text-xl font-bold text-green-700">{formatCurrency(dayRevenue)}</p>
+              <p className="text-[10px] text-muted-foreground">Vendas do dia</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold">{dayOrders.length}</p>
+              <p className="text-[10px] text-muted-foreground">Pedidos</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold">{dayPaid.length}</p>
+              <p className="text-[10px] text-muted-foreground">Pagos</p>
+            </div>
+            {dayCancelled > 0 && (
+              <div>
+                <p className="text-xl font-bold text-red-600">{dayCancelled}</p>
+                <p className="text-[10px] text-muted-foreground">Cancelados</p>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setSelectedDate(now.toISOString().split('T')[0])}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground underline"
+          >
+            Hoje
+          </button>
         </div>
       </div>
 
