@@ -69,12 +69,17 @@ export default function ProductForm() {
   const handleChange = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, images: [...prev.images, file_url] }));
+    const urls = [];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      urls.push(file_url);
+    }
+    setForm(prev => ({ ...prev, images: [...prev.images, ...urls].slice(0, 20) }));
     setUploading(false);
+    e.target.value = '';
   };
 
   const removeImage = (idx) => {
@@ -223,7 +228,7 @@ export default function ProductForm() {
                 </button>
               </div>
             ))}
-            {form.images.length < 5 && (
+            {form.images.length < 20 && (
               <label className="aspect-square border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-foreground transition-colors">
                 {uploading ? (
                   <div className="w-5 h-5 border-2 border-foreground border-t-transparent animate-spin" />
@@ -233,7 +238,7 @@ export default function ProductForm() {
                     <span className="text-[10px] text-muted-foreground">Enviar</span>
                   </>
                 )}
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
               </label>
             )}
           </div>
