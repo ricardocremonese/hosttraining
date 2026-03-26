@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Sparkles, Copy, Check, Instagram, Mail, MessageCircle, AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import { Sparkles, Copy, Check, Instagram, Mail, MessageCircle, AlertTriangle, Link as LinkIcon, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const contentTypes = [
@@ -11,6 +11,69 @@ const contentTypes = [
 ];
 
 const toneOptions = ['Profissional', 'Casual', 'Urgente', 'Inspirador', 'Divertido'];
+
+function ProductSearchSelect({ products, value, onChange }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected = products.find(p => p.id === value);
+
+  const filtered = search.trim()
+    ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category?.toLowerCase().includes(search.toLowerCase()))
+    : products;
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="block text-xs font-medium mb-1.5">Produto (opcional)</label>
+      {selected ? (
+        <div className="flex items-center gap-2 border border-border px-3 py-2.5">
+          {selected.images?.[0] && <img src={selected.images[0]} alt="" className="w-8 h-8 object-cover flex-shrink-0" />}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{selected.name}</p>
+            <p className="text-[10px] text-muted-foreground">R${selected.price?.toFixed(2)}</p>
+          </div>
+          <button onClick={() => { onChange(''); setSearch(''); }} className="p-1 hover:bg-secondary"><X className="w-3.5 h-3.5 text-muted-foreground" /></button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            placeholder="Buscar produto por nome..."
+            className="w-full border border-border pl-9 pr-3 py-2.5 text-sm outline-none focus:border-foreground"
+          />
+        </div>
+      )}
+      {open && !selected && (
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-border shadow-lg max-h-64 overflow-y-auto">
+          <button onClick={() => { onChange(''); setOpen(false); setSearch(''); }} className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary transition-colors text-muted-foreground">
+            Geral — Loja HOST Training
+          </button>
+          {filtered.length === 0 ? (
+            <p className="px-3 py-4 text-xs text-muted-foreground text-center">Nenhum produto encontrado</p>
+          ) : filtered.map(p => (
+            <button key={p.id} onClick={() => { onChange(p.id); setOpen(false); setSearch(''); }} className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-secondary transition-colors">
+              {p.images?.[0] ? <img src={p.images[0]} alt="" className="w-8 h-8 object-cover flex-shrink-0" /> : <div className="w-8 h-8 bg-secondary flex-shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{p.name}</p>
+                <p className="text-[10px] text-muted-foreground">R${p.price?.toFixed(2)} · {p.category}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AIContent() {
   const [selectedProduct, setSelectedProduct] = useState('');
@@ -136,15 +199,11 @@ export default function AIContent() {
         {/* Config */}
         <div className="space-y-4">
           <div className="bg-white border border-border p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-medium mb-1.5">Produto (opcional)</label>
-              <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="w-full border border-border px-3 py-2.5 text-sm outline-none">
-                <option value="">Geral — Loja HOST Training</option>
-                {products.filter(p => p.status === 'published').map(p => (
-                  <option key={p.id} value={p.id}>{p.name} — R${p.price?.toFixed(2)}</option>
-                ))}
-              </select>
-            </div>
+            <ProductSearchSelect
+              products={products.filter(p => p.status === 'published')}
+              value={selectedProduct}
+              onChange={setSelectedProduct}
+            />
 
             <div>
               <label className="block text-xs font-medium mb-2">Tipo de Conteúdo</label>

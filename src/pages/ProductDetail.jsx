@@ -28,11 +28,25 @@ export default function ProductDetail() {
     enabled: !!productId,
   });
 
-  const { data: relatedProducts = [] } = useQuery({
+  const { data: sameCategoryProducts = [] } = useQuery({
     queryKey: ['related-products', product?.category],
-    queryFn: () => base44.entities.Product.filter({ category: product.category, status: 'published' }, '-created_date', 6),
+    queryFn: () => base44.entities.Product.filter({ category: product.category, status: 'published' }, '-created_date', 10),
     enabled: !!product?.category,
   });
+
+  const { data: otherProducts = [] } = useQuery({
+    queryKey: ['other-products'],
+    queryFn: () => base44.entities.Product.filter({ status: 'published' }, '-created_date', 20),
+    enabled: !!product?.id,
+  });
+
+  // Garantir pelo menos 3 produtos similares: mesma categoria primeiro, depois outros
+  const relatedProducts = (() => {
+    const sameCategory = sameCategoryProducts.filter(p => p.id !== product?.id);
+    if (sameCategory.length >= 3) return sameCategory;
+    const others = otherProducts.filter(p => p.id !== product?.id && !sameCategory.find(s => s.id === p.id));
+    return [...sameCategory, ...others];
+  })();
 
   if (isLoading) {
     return (
@@ -215,14 +229,12 @@ export default function ProductDetail() {
       </div>
 
       {/* Related Products */}
-      {relatedProducts.filter(p => p.id !== product.id).length > 0 && (
+      {relatedProducts.length > 0 && (
         <section className="mt-16">
           <h2 className="text-xl font-bold tracking-tight mb-6">Você Também Pode Gostar</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 snap-x">
-            {relatedProducts.filter(p => p.id !== product.id).slice(0, 6).map(p => (
-              <div key={p.id} className="w-64 flex-shrink-0 snap-start">
-                <ProductCard product={p} />
-              </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {relatedProducts.slice(0, 4).map(p => (
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
