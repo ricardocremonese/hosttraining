@@ -4,16 +4,41 @@ import { base44 } from '@/api/base44Client';
 import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { cpf as cpfValidator } from 'cpf-cnpj-validator';
 
 const steps = ['Informações', 'Entrega', 'Pagamento'];
+
+// Máscaras
+const maskCPF = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+};
+
+const maskPhone = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 7) return `(${digits.slice(0, 2)})${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)})${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const maskCEP = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
   const [step, setStep] = useState(0);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
+  const [cpfError, setCpfError] = useState('');
   const [form, setForm] = useState({
-    customer_name: '', customer_email: '',
-    street: '', city: '', state: '', zip: '', country: 'BR',
+    customer_name: '', customer_email: '', customer_phone: '', customer_cpf: '',
+    street: '', complement: '', city: '', state: '', zip: '', country: 'BR',
   });
 
   const shipping = subtotal >= 300 ? 0 : 19.99;
@@ -21,18 +46,78 @@ export default function Checkout() {
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
+  const handleCPFChange = (e) => {
+    const masked = maskCPF(e.target.value);
+    setForm(prev => ({ ...prev, customer_cpf: masked }));
+    const digits = masked.replace(/\D/g, '');
+    if (digits.length === 11) {
+      setCpfError(cpfValidator.isValid(digits) ? '' : 'CPF inválido');
+    } else {
+      setCpfError('');
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    setForm(prev => ({ ...prev, customer_phone: maskPhone(e.target.value) }));
+  };
+
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState('');
+
+  const handleCEPChange = async (e) => {
+    const masked = maskCEP(e.target.value);
+    setForm(prev => ({ ...prev, zip: masked }));
+    setCepError('');
+
+    const digits = masked.replace(/\D/g, '');
+    if (digits.length === 8) {
+      setCepLoading(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+        const data = await res.json();
+        if (data.erro) {
+          setCepError('CEP não encontrado');
+        } else {
+          setForm(prev => ({
+            ...prev,
+            street: data.logradouro || prev.street,
+            city: data.localidade || prev.city,
+            state: data.uf || prev.state,
+            complement: data.complemento || prev.complement,
+          }));
+        }
+      } catch {
+        setCepError('Erro ao buscar CEP');
+      }
+      setCepLoading(false);
+    }
+  };
+
+  const cpfDigits = form.customer_cpf.replace(/\D/g, '');
+  const phoneDigits = form.customer_phone.replace(/\D/g, '');
+  const isCpfComplete = cpfDigits.length === 11 && cpfValidator.isValid(cpfDigits);
+  const isPhoneComplete = phoneDigits.length === 11;
+
+  const requiredFields = ['customer_name', 'customer_email', 'street', 'city', 'state', 'zip'];
+  const isFormValid = requiredFields.every(field => form[field]?.trim()) && isCpfComplete && isPhoneComplete;
+
   const handlePlaceOrder = async () => {
+    const orderCode = `HT-${Date.now().toString(36).toUpperCase()}`;
     await base44.entities.Order.create({
+      order_number: orderCode,
       items,
       customer_name: form.customer_name,
       customer_email: form.customer_email,
+      customer_phone: form.customer_phone,
+      customer_cpf: form.customer_cpf,
       shipping_address: {
-        street: form.street, city: form.city,
+        street: form.street, complement: form.complement, city: form.city,
         state: form.state, zip: form.zip, country: form.country,
       },
       subtotal, shipping_cost: shipping, total,
       status: 'pending', payment_status: 'paid',
     });
+    setOrderNumber(orderCode);
     clearCart();
     setOrderPlaced(true);
   };
@@ -48,10 +133,20 @@ export default function Checkout() {
           <Check className="w-8 h-8" />
         </motion.div>
         <h1 className="text-2xl font-bold mb-2">Pedido Confirmado</h1>
-        <p className="text-sm text-muted-foreground mb-8">Obrigado pela sua compra. Você receberá um e-mail de confirmação em breve.</p>
-        <Link to="/" className="inline-block bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-foreground/90 transition-colors">
-          Continuar Comprando
-        </Link>
+        <div className="bg-secondary px-6 py-4 inline-block mb-4">
+          <p className="text-xs text-muted-foreground mb-1">Número do pedido</p>
+          <p className="text-lg font-mono font-bold tracking-wider">{orderNumber}</p>
+        </div>
+        <p className="text-sm text-muted-foreground mb-2">Guarde este número para acompanhar seu pedido.</p>
+        <p className="text-sm text-muted-foreground mb-8">Você receberá um e-mail de confirmação em breve.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link to={`/rastreio?pedido=${orderNumber}`} className="inline-block bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-foreground/90 transition-colors">
+            Acompanhar Pedido
+          </Link>
+          <Link to="/" className="inline-block border border-border px-8 py-4 text-sm font-medium hover:border-foreground transition-colors">
+            Continuar Comprando
+          </Link>
+        </div>
       </div>
     );
   }
@@ -92,19 +187,34 @@ export default function Checkout() {
               <motion.div key="info" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h2 className="text-lg font-bold mb-6">Informações de Contato</h2>
                 <div className="space-y-4 mb-8">
-                  <input name="customer_name" value={form.customer_name} onChange={handleChange} placeholder="Nome Completo" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
-                  <input name="customer_email" value={form.customer_email} onChange={handleChange} placeholder="E-mail" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+                  <input name="customer_name" value={form.customer_name} onChange={handleChange} placeholder="Nome Completo *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.customer_name.trim() && form.customer_name !== '' ? 'border-destructive' : 'border-border'}`} />
+                  <div>
+                    <input name="customer_cpf" value={form.customer_cpf} onChange={handleCPFChange} placeholder="CPF *  000.000.000-00" inputMode="numeric" maxLength={14} className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${cpfError ? 'border-destructive' : 'border-border'}`} />
+                    {cpfError && <p className="text-xs text-destructive mt-1">{cpfError}</p>}
+                  </div>
+                  <input name="customer_email" value={form.customer_email} onChange={handleChange} placeholder="E-mail *" type="email" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.customer_email.trim() && form.customer_email !== '' ? 'border-destructive' : 'border-border'}`} />
+                  <input name="customer_phone" value={form.customer_phone} onChange={handlePhoneChange} placeholder="WhatsApp *  (11)99999-9999" inputMode="numeric" maxLength={14} className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${phoneDigits.length > 0 && !isPhoneComplete ? 'border-destructive' : 'border-border'}`} />
                 </div>
                 <h2 className="text-lg font-bold mb-6">Endereço de Entrega</h2>
                 <div className="space-y-4">
-                  <input name="street" value={form.street} onChange={handleChange} placeholder="Endereço" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input name="city" value={form.city} onChange={handleChange} placeholder="Cidade" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
-                    <input name="state" value={form.state} onChange={handleChange} placeholder="Estado" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+                  <div>
+                    <div className="relative">
+                      <input name="zip" value={form.zip} onChange={handleCEPChange} placeholder="CEP *  00000-000" inputMode="numeric" maxLength={9} className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${cepError ? 'border-destructive' : 'border-border'}`} />
+                      {cepLoading && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-foreground border-t-transparent animate-spin rounded-full" />}
+                    </div>
+                    {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
                   </div>
-                  <input name="zip" value={form.zip} onChange={handleChange} placeholder="CEP" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+                  <input name="street" value={form.street} onChange={handleChange} placeholder="Endereço *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.street.trim() && form.street !== '' ? 'border-destructive' : 'border-border'}`} />
+                  <input name="complement" value={form.complement} onChange={handleChange} placeholder="Complemento (apto, bloco, etc.)" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input name="city" value={form.city} onChange={handleChange} placeholder="Cidade *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.city.trim() && form.city !== '' ? 'border-destructive' : 'border-border'}`} />
+                    <input name="state" value={form.state} onChange={handleChange} placeholder="Estado *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.state.trim() && form.state !== '' ? 'border-destructive' : 'border-border'}`} />
+                  </div>
                 </div>
-                <button onClick={() => setStep(1)} className="mt-8 w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors">
+                {!isFormValid && (
+                  <p className="text-xs text-destructive mt-3">* Preencha todos os campos obrigatórios para continuar</p>
+                )}
+                <button onClick={() => setStep(1)} disabled={!isFormValid} className="mt-8 w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   Continuar para Entrega
                 </button>
               </motion.div>

@@ -13,6 +13,7 @@ import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
+import OrderTracking from './pages/OrderTracking';
 
 // Admin pages
 import AdminLayout from './components/admin/AdminLayout';
@@ -54,6 +55,7 @@ const AuthenticatedApp = () => {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/rastreio" element={<OrderTracking />} />
         </Route>
 
         {/* Admin Routes */}

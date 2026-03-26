@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../config/supabase.js';
+import { enviarConfirmacaoPedido } from '../services/email.js';
 
 const router = Router();
 
@@ -31,6 +32,11 @@ router.post('/', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Envia e-mail de confirmação (async, não bloqueia resposta)
+    if (order.customer_email) {
+      enviarConfirmacaoPedido(order).catch(err => console.error('Falha ao enviar e-mail:', err));
+    }
 
     res.json({ success: true, order });
   } catch (error) {

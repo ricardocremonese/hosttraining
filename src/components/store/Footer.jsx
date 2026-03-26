@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import Logo from './NikeLogo';
 
 const footerLinks = {
-  'Ajuda': ['Status do Pedido', 'Entregas', 'Devoluções', 'Formas de Pagamento', 'Fale Conosco'],
+  'Ajuda': ['Acompanhar Pedido', 'Entregas', 'Devoluções', 'Formas de Pagamento', 'Fale Conosco'],
   'Institucional': ['Sobre Nós', 'Política de Privacidade', 'Termos de Uso'],
   'Comunidade': ['Instagram', 'WhatsApp'],
 };
 
 const linkHrefs = {
+  'Acompanhar Pedido': '/rastreio',
   'Instagram': 'https://www.hosttraining.com.br',
   'WhatsApp': 'https://wa.me/5511995933974',
 };
@@ -48,7 +49,8 @@ export default function Footer() {
               <ul className="space-y-3">
                 {links.map(link => {
                   const href = linkHrefs[link];
-                  if (href) {
+                  const isExternal = href && href.startsWith('http');
+                  if (href && isExternal) {
                     return (
                       <li key={link}>
                         <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-400 hover:text-white transition-colors">
@@ -59,7 +61,7 @@ export default function Footer() {
                   }
                   return (
                     <li key={link}>
-                      <Link to="#" className="text-xs text-neutral-400 hover:text-white transition-colors">
+                      <Link to={href || '#'} className="text-xs text-neutral-400 hover:text-white transition-colors">
                         {link}
                       </Link>
                     </li>

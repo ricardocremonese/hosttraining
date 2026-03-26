@@ -31,9 +31,12 @@ CREATE TABLE IF NOT EXISTS products (
 -- ===================
 CREATE TABLE IF NOT EXISTS orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_number TEXT UNIQUE,
   items JSONB DEFAULT '[]'::jsonb,
   customer_name TEXT,
   customer_email TEXT,
+  customer_phone TEXT,
+  customer_cpf TEXT,
   shipping_address JSONB,
   subtotal NUMERIC(10,2) DEFAULT 0,
   shipping_cost NUMERIC(10,2) DEFAULT 0,
@@ -115,6 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_products_gender ON products(gender);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders(customer_email);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_cpf ON orders(customer_cpf);
+CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_banners_active ON banners(active);
 CREATE INDEX IF NOT EXISTS idx_banners_display_order ON banners(display_order);
 CREATE INDEX IF NOT EXISTS idx_categories_display_order ON categories(display_order);
