@@ -27,6 +27,7 @@ const marketingItems = [
 
 const analyticsItems = [
   { label: 'Visitas', href: '/admin/analytics/views', icon: Eye },
+  { label: 'Métricas', href: '/admin/analytics/metrics', icon: BarChart3 },
 ];
 
 const salesItems = [
