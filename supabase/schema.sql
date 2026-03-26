@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS products (
   sizes JSONB DEFAULT '[]'::jsonb,
   images JSONB DEFAULT '[]'::jsonb,
   sport TEXT,
+  cost_price NUMERIC(10,2) DEFAULT 0,
   created_date TIMESTAMPTZ DEFAULT now(),
   updated_date TIMESTAMPTZ DEFAULT now()
 );
@@ -192,6 +193,20 @@ CREATE TABLE IF NOT EXISTS abandoned_carts (
 );
 
 -- ===================
+-- TABELA: marketing_spend (investimento em marketing)
+-- ===================
+CREATE TABLE IF NOT EXISTS marketing_spend (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  channel TEXT NOT NULL,
+  amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  notes TEXT,
+  created_date TIMESTAMPTZ DEFAULT now(),
+  updated_date TIMESTAMPTZ DEFAULT now()
+);
+
+-- ===================
 -- TABELA: product_views (rastreamento de visitas)
 -- ===================
 CREATE TABLE IF NOT EXISTS product_views (
@@ -264,6 +279,7 @@ ALTER TABLE integrations_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE abandoned_carts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketing_spend ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE downsells ENABLE ROW LEVEL SECURITY;
 
@@ -320,6 +336,9 @@ CREATE POLICY "abandoned_carts_select" ON abandoned_carts FOR SELECT USING (true
 CREATE POLICY "abandoned_carts_insert" ON abandoned_carts FOR INSERT WITH CHECK (true);
 CREATE POLICY "abandoned_carts_update" ON abandoned_carts FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "abandoned_carts_delete" ON abandoned_carts FOR DELETE USING (true);
+
+-- Marketing Spend
+CREATE POLICY "marketing_spend_all" ON marketing_spend FOR ALL USING (true) WITH CHECK (true);
 
 -- Product Views
 CREATE POLICY "product_views_all" ON product_views FOR ALL USING (true) WITH CHECK (true);

@@ -17,7 +17,7 @@ export default function ProductForm() {
 
   const [form, setForm] = useState({
     name: '', slug: '', description: '', category: 'armas',
-    price: '', sale_price: '', stock: '', status: 'draft', featured: false,
+    cost_price: '', price: '', sale_price: '', stock: '', status: 'draft', featured: false,
     colors: [{ name: 'Preto', hex: '#111111' }],
     sizes: [],
     images: [],
@@ -41,6 +41,7 @@ export default function ProductForm() {
         slug: product.slug || '',
         description: product.description || '',
         category: product.category || 'armas',
+        cost_price: product.cost_price?.toString() || '',
         price: product.price?.toString() || '',
         sale_price: product.sale_price?.toString() || '',
         stock: product.stock?.toString() || '',
@@ -106,6 +107,7 @@ export default function ProductForm() {
     e.preventDefault();
     saveMutation.mutate({
       ...form,
+      cost_price: parseFloat(form.cost_price) || 0,
       price: parseFloat(form.price) || 0,
       sale_price: form.sale_price ? parseFloat(form.sale_price) : undefined,
       stock: parseInt(form.stock) || 0,
@@ -141,9 +143,13 @@ export default function ProductForm() {
         {/* Pricing */}
         <div className="bg-white border border-border p-6 space-y-4">
           <h2 className="text-sm font-bold mb-2">Preço e Estoque</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5">Preço (R$)</label>
+              <label className="block text-xs font-medium mb-1.5">Preço de Custo (R$)</label>
+              <input type="number" step="0.01" value={form.cost_price} onChange={(e) => handleChange('cost_price', e.target.value)} placeholder="0.00" className="w-full border border-border px-3 py-2.5 text-sm outline-none focus:border-foreground" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5">Preço de Venda (R$)</label>
               <input type="number" step="0.01" value={form.price} onChange={(e) => handleChange('price', e.target.value)} className="w-full border border-border px-3 py-2.5 text-sm outline-none focus:border-foreground" required />
             </div>
             <div>

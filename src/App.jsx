@@ -34,6 +34,7 @@ import WhatsAppMarketing from './pages/admin/marketing/WhatsApp';
 import Birthdays from './pages/admin/marketing/Birthdays';
 import ProductViews from './pages/admin/analytics/ProductViews';
 import MetricsPage from './pages/admin/analytics/Metrics';
+import BusinessMetricsPage from './pages/admin/analytics/BusinessMetrics';
 import DownsellPage from './pages/admin/sales/Downsell';
 
 const AuthenticatedApp = () => {
@@ -88,6 +89,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/marketing/birthdays" element={<Birthdays />} />
           <Route path="/admin/analytics/views" element={<ProductViews />} />
           <Route path="/admin/analytics/metrics" element={<MetricsPage />} />
+          <Route path="/admin/analytics/business" element={<BusinessMetricsPage />} />
           <Route path="/admin/sales/downsell" element={<DownsellPage />} />
         </Route>
 

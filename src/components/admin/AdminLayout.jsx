@@ -2,18 +2,21 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight, MessageCircle, Cake, BarChart3, Eye, TrendingDown, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight, MessageCircle, Cake, BarChart3, Eye, TrendingDown, DollarSign, Globe } from 'lucide-react';
 import Logo from '../store/NikeLogo';
 
 const navItems = [
   { label: 'Painel', href: '/admin', icon: LayoutDashboard },
-  { label: 'Banners', href: '/admin/banners', icon: Image },
-  { label: 'Destaques', href: '/admin/editorials', icon: Newspaper },
-  { label: 'Essenciais', href: '/admin/essentials', icon: LayoutGrid },
   { label: 'Produtos', href: '/admin/products', icon: Package },
   { label: 'Pedidos', href: '/admin/orders', icon: ShoppingCart },
   { label: 'Categorias', href: '/admin/categories', icon: Tag },
   { label: 'Integrações', href: '/admin/integrations', icon: Plug },
+];
+
+const siteItems = [
+  { label: 'Banners', href: '/admin/banners', icon: Image },
+  { label: 'Destaques', href: '/admin/editorials', icon: Newspaper },
+  { label: 'Essenciais', href: '/admin/essentials', icon: LayoutGrid },
 ];
 
 const marketingItems = [
@@ -28,6 +31,7 @@ const marketingItems = [
 const analyticsItems = [
   { label: 'Visitas', href: '/admin/analytics/views', icon: Eye },
   { label: 'Métricas', href: '/admin/analytics/metrics', icon: BarChart3 },
+  { label: 'Negócio', href: '/admin/analytics/business', icon: DollarSign },
 ];
 
 const salesItems = [
@@ -36,9 +40,11 @@ const salesItems = [
 
 export default function AdminLayout() {
   const location = useLocation();
+  const isSiteActive = ['/admin/banners', '/admin/editorials', '/admin/essentials'].some(p => location.pathname.startsWith(p));
   const isMarketingActive = location.pathname.startsWith('/admin/marketing');
   const isAnalyticsActive = location.pathname.startsWith('/admin/analytics');
   const isSalesActive = location.pathname.startsWith('/admin/sales');
+  const [siteOpen, setSiteOpen] = useState(isSiteActive);
   const [marketingOpen, setMarketingOpen] = useState(isMarketingActive);
   const [analyticsOpen, setAnalyticsOpen] = useState(isAnalyticsActive);
   const [salesOpen, setSalesOpen] = useState(isSalesActive);
@@ -84,6 +90,38 @@ export default function AdminLayout() {
               </Link>
             );
           })}
+
+          {/* Site Submenu */}
+          <div className="pt-2">
+            <button
+              onClick={() => setSiteOpen(!siteOpen)}
+              className={`flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors ${
+                isSiteActive ? 'bg-white/10 text-white font-medium' : 'text-neutral-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <Globe className="w-4 h-4" strokeWidth={1.5} />
+                Site
+              </span>
+              {siteOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+            {siteOpen && (
+              <div className="ml-4 border-l border-neutral-700 pl-3 mt-1 space-y-0.5">
+                {siteItems.map(item => {
+                  const active = location.pathname === item.href;
+                  return (
+                    <Link key={item.href} to={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-[13px] transition-colors ${
+                        active ? 'bg-white/10 text-white font-medium' : 'text-neutral-500 hover:text-white hover:bg-white/5'
+                      }`}>
+                      <item.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Marketing Submenu */}
           <div className="pt-2">
@@ -162,7 +200,7 @@ export default function AdminLayout() {
             >
               <span className="flex items-center gap-3">
                 <DollarSign className="w-4 h-4" strokeWidth={1.5} />
-                Vendas
+                Estratégia de Vendas
               </span>
               {salesOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </button>

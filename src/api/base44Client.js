@@ -16,6 +16,7 @@ const tableMap = {
   AbandonedCart: 'abandoned_carts',
   ProductView: 'product_views',
   Downsell: 'downsells',
+  MarketingSpend: 'marketing_spend',
 };
 
 const createEntityAPI = (entityName) => {
@@ -118,6 +119,7 @@ export const base44 = {
     AbandonedCart: createEntityAPI('AbandonedCart'),
     ProductView: createEntityAPI('ProductView'),
     Downsell: createEntityAPI('Downsell'),
+    MarketingSpend: createEntityAPI('MarketingSpend'),
   },
   integrations: {
     Core: {
