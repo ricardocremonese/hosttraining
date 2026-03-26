@@ -48,7 +48,7 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [form, setForm] = useState({
     customer_name: '', customer_email: '', customer_phone: '', customer_cpf: '',
-    street: '', complement: '', city: '', state: '', zip: '', country: 'BR',
+    street: '', number: '', complement: '', observation: '', city: '', state: '', zip: '', country: 'BR',
   });
 
   // Carregar provedor de pagamento ativo
@@ -146,7 +146,6 @@ export default function Checkout() {
             street: data.logradouro || prev.street,
             city: data.localidade || prev.city,
             state: data.uf || prev.state,
-            complement: data.complemento || prev.complement,
           }));
         }
       } catch {
@@ -161,7 +160,7 @@ export default function Checkout() {
   const isCpfComplete = cpfDigits.length === 11 && cpfValidator.isValid(cpfDigits);
   const isPhoneComplete = phoneDigits.length === 11;
 
-  const requiredFields = ['customer_name', 'customer_email', 'street', 'city', 'state', 'zip'];
+  const requiredFields = ['customer_name', 'customer_email', 'street', 'number', 'city', 'state', 'zip'];
   const isFormValid = requiredFields.every(field => form[field]?.trim()) && isCpfComplete && isPhoneComplete;
 
   // Cria pedido pendente antes do pagamento
@@ -175,7 +174,8 @@ export default function Checkout() {
       customer_phone: form.customer_phone,
       customer_cpf: form.customer_cpf,
       shipping_address: {
-        street: form.street, complement: form.complement, city: form.city,
+        street: form.street, number: form.number, complement: form.complement,
+        observation: form.observation, city: form.city,
         state: form.state, zip: form.zip, country: form.country,
       },
       subtotal, shipping_cost: shipping, total,
@@ -197,7 +197,8 @@ export default function Checkout() {
       customer_phone: form.customer_phone,
       customer_cpf: form.customer_cpf,
       shipping_address: {
-        street: form.street, complement: form.complement, city: form.city,
+        street: form.street, number: form.number, complement: form.complement,
+        observation: form.observation, city: form.city,
         state: form.state, zip: form.zip, country: form.country,
       },
       subtotal, shipping_cost: shipping, total,
@@ -300,12 +301,16 @@ export default function Checkout() {
                     </div>
                     {cepError && <p className="text-xs text-destructive mt-1">{cepError}</p>}
                   </div>
-                  <input name="street" value={form.street} onChange={handleChange} placeholder="Endereço *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.street.trim() && form.street !== '' ? 'border-destructive' : 'border-border'}`} />
+                  <div className="grid grid-cols-3 gap-4">
+                    <input name="street" value={form.street} onChange={handleChange} placeholder="Rua / Avenida *" className={`col-span-2 border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.street.trim() && form.street !== '' ? 'border-destructive' : 'border-border'}`} />
+                    <input name="number" value={form.number} onChange={handleChange} placeholder="Número *" className={`border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.number.trim() && form.number !== '' ? 'border-destructive' : 'border-border'}`} />
+                  </div>
                   <input name="complement" value={form.complement} onChange={handleChange} placeholder="Complemento (apto, bloco, etc.)" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
                   <div className="grid grid-cols-2 gap-4">
-                    <input name="city" value={form.city} onChange={handleChange} placeholder="Cidade *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.city.trim() && form.city !== '' ? 'border-destructive' : 'border-border'}`} />
-                    <input name="state" value={form.state} onChange={handleChange} placeholder="Estado *" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.state.trim() && form.state !== '' ? 'border-destructive' : 'border-border'}`} />
+                    <input name="city" value={form.city} onChange={handleChange} placeholder="Cidade *" className={`border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.city.trim() && form.city !== '' ? 'border-destructive' : 'border-border'}`} />
+                    <input name="state" value={form.state} onChange={handleChange} placeholder="Estado *" className={`border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.state.trim() && form.state !== '' ? 'border-destructive' : 'border-border'}`} />
                   </div>
+                  <textarea name="observation" value={form.observation} onChange={handleChange} placeholder="Observação para entrega (ex: Deixar na portaria, entregar ao porteiro...)" rows={2} className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors resize-none" />
                 </div>
                 {!isFormValid && (
                   <p className="text-xs text-destructive mt-3">* Preencha todos os campos obrigatórios para continuar</p>

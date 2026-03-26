@@ -176,9 +176,12 @@ export default function OrderTracking() {
             <div className="bg-white border border-border p-6">
               <h3 className="text-sm font-bold mb-2">Endereço de Entrega</h3>
               <div className="text-xs text-muted-foreground space-y-0.5">
-                <p>{order.shipping_address.street}</p>
+                <p>{order.shipping_address.street}{order.shipping_address.number ? `, ${order.shipping_address.number}` : ''}</p>
                 {order.shipping_address.complement && <p>{order.shipping_address.complement}</p>}
                 <p>{order.shipping_address.city}, {order.shipping_address.state} - {order.shipping_address.zip}</p>
+                {order.shipping_address.observation && (
+                  <p className="mt-1 text-amber-700 bg-amber-50 px-2 py-1 rounded">OBS: {order.shipping_address.observation}</p>
+                )}
               </div>
             </div>
           )}

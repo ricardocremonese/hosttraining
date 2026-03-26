@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import Logo from '../store/NikeLogo';
 
@@ -26,6 +28,13 @@ export default function AdminLayout() {
   const isMarketingActive = location.pathname.startsWith('/admin/marketing');
   const [marketingOpen, setMarketingOpen] = useState(isMarketingActive);
 
+  const { data: orders = [] } = useQuery({
+    queryKey: ['admin-orders-sidebar'],
+    queryFn: () => base44.entities.Order.filter({ status: 'pending' }, '-created_date', 100),
+    refetchInterval: 30000, // atualiza a cada 30s
+  });
+  const pendingCount = orders.length;
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -39,16 +48,24 @@ export default function AdminLayout() {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map(item => {
             const active = location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href));
+            const isOrders = item.href === '/admin/orders';
             return (
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
+                className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
                   active ? 'bg-white/10 text-white font-medium' : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <item.icon className="w-4 h-4" strokeWidth={1.5} />
-                {item.label}
+                <span className="flex items-center gap-3">
+                  <item.icon className="w-4 h-4" strokeWidth={1.5} />
+                  {item.label}
+                </span>
+                {isOrders && pendingCount > 0 && (
+                  <span className="min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-pulse">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

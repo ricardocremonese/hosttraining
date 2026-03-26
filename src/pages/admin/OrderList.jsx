@@ -28,7 +28,10 @@ export default function OrderList() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Order.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-orders'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders-sidebar'] });
+    },
   });
 
   const filtered = useMemo(() => {
@@ -214,10 +217,13 @@ export default function OrderList() {
                               <div>
                                 <p className="text-xs font-bold mb-2">Endereço de Entrega</p>
                                 {order.shipping_address ? (
-                                  <div className="text-xs text-muted-foreground">
-                                    <p>{order.shipping_address.street}</p>
+                                  <div className="text-xs text-muted-foreground space-y-0.5">
+                                    <p>{order.shipping_address.street}{order.shipping_address.number ? `, ${order.shipping_address.number}` : ''}</p>
                                     {order.shipping_address.complement && <p>{order.shipping_address.complement}</p>}
                                     <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zip}</p>
+                                    {order.shipping_address.observation && (
+                                      <p className="mt-1 text-amber-700 bg-amber-50 px-2 py-1 rounded">OBS: {order.shipping_address.observation}</p>
+                                    )}
                                   </div>
                                 ) : (
                                   <p className="text-xs text-muted-foreground">Sem endereço</p>
