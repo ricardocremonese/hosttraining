@@ -25,6 +25,11 @@ import CategoryManager from './pages/admin/CategoryManager';
 import BannerManager from './pages/admin/BannerManager';
 import EditorialManager from './pages/admin/EditorialManager';
 import FeaturedCategoryManager from './pages/admin/FeaturedCategoryManager';
+import Integrations from './pages/admin/Integrations';
+import Coupons from './pages/admin/marketing/Coupons';
+import Campaigns from './pages/admin/marketing/Campaigns';
+import FollowUp from './pages/admin/marketing/FollowUp';
+import AIContent from './pages/admin/marketing/AIContent';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -69,6 +74,11 @@ const AuthenticatedApp = () => {
           <Route path="/admin/banners" element={<BannerManager />} />
           <Route path="/admin/editorials" element={<EditorialManager />} />
           <Route path="/admin/essentials" element={<FeaturedCategoryManager />} />
+          <Route path="/admin/integrations" element={<Integrations />} />
+          <Route path="/admin/marketing/coupons" element={<Coupons />} />
+          <Route path="/admin/marketing/campaigns" element={<Campaigns />} />
+          <Route path="/admin/marketing/followup" element={<FollowUp />} />
+          <Route path="/admin/marketing/ai" element={<AIContent />} />
         </Route>
 
         <Route path="*" element={<PageNotFound />} />

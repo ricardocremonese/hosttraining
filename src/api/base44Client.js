@@ -10,6 +10,10 @@ const tableMap = {
   Banner: 'banners',
   Editorial: 'editorials',
   FeaturedCategory: 'featured_categories',
+  Integration: 'integrations_config',
+  Coupon: 'coupons',
+  Campaign: 'campaigns',
+  AbandonedCart: 'abandoned_carts',
 };
 
 const createEntityAPI = (entityName) => {
@@ -106,6 +110,10 @@ export const base44 = {
     Banner: createEntityAPI('Banner'),
     Editorial: createEntityAPI('Editorial'),
     FeaturedCategory: createEntityAPI('FeaturedCategory'),
+    Integration: createEntityAPI('Integration'),
+    Coupon: createEntityAPI('Coupon'),
+    Campaign: createEntityAPI('Campaign'),
+    AbandonedCart: createEntityAPI('AbandonedCart'),
   },
   integrations: {
     Core: {

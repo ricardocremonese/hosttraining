@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Package, ShoppingCart, DollarSign, AlertTriangle, XCircle, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, AlertTriangle, XCircle, TrendingUp, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 const statusLabels = { pending: 'Pendente', confirmed: 'Confirmado', shipped: 'Enviado', delivered: 'Entregue', cancelled: 'Cancelado' };
@@ -117,6 +117,37 @@ export default function Dashboard() {
 
     return weeks;
   }, [monthOrders, prevMonthOrders, selectedMonth, selectedYear, compareEnabled]);
+
+  // Ranking dos produtos mais vendidos (apenas pedidos pagos)
+  const topProducts = useMemo(() => {
+    const productMap = {};
+    const paidAll = allOrders.filter(o => paidStatuses.includes(o.status));
+
+    paidAll.forEach(order => {
+      (order.items || []).forEach(item => {
+        const key = item.product_id || item.product_name;
+        if (!productMap[key]) {
+          productMap[key] = {
+            name: item.product_name,
+            image: item.image || '',
+            product_id: item.product_id,
+            quantity: 0,
+            revenue: 0,
+          };
+        }
+        productMap[key].quantity += item.quantity || 1;
+        productMap[key].revenue += (item.price || 0) * (item.quantity || 1);
+      });
+    });
+
+    return Object.values(productMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 3);
+  }, [allOrders]);
+
+  const trophyColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+  const trophyLabels = ['Ouro', 'Prata', 'Bronze'];
+  const trophyBg = ['bg-amber-50 border-amber-200', 'bg-slate-50 border-slate-200', 'bg-orange-50 border-orange-200'];
 
   // Navegação de mês
   const prevMonth = () => {
@@ -263,6 +294,67 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Top 3 Products */}
+      {topProducts.length > 0 && (
+        <div className="bg-white border border-border p-6 mb-8">
+          <div className="flex items-center gap-2 mb-6">
+            <Trophy className="w-5 h-5 text-amber-500" strokeWidth={1.5} />
+            <h2 className="text-sm font-bold">Produtos Mais Vendidos</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {topProducts.map((product, idx) => (
+              <a
+                key={idx}
+                href={product.product_id ? `/products/${product.product_id}` : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`relative border p-5 flex items-center gap-4 transition-all hover:shadow-md group ${trophyBg[idx]}`}
+              >
+                {/* Position Badge */}
+                <div className="absolute -top-3 -left-2 flex items-center gap-1">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shadow-md"
+                    style={{ backgroundColor: trophyColors[idx] }}
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-white" fill="white" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] font-bold" style={{ color: trophyColors[idx] }}>
+                    {idx + 1}º
+                  </span>
+                </div>
+
+                {/* Product Image */}
+                <div className="w-16 h-16 bg-white flex-shrink-0 overflow-hidden border border-border">
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="w-6 h-6 text-muted-foreground" strokeWidth={1} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate group-hover:underline">{product.name}</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <div>
+                      <p className="text-lg font-bold">{product.quantity}</p>
+                      <p className="text-[10px] text-muted-foreground -mt-0.5">vendidos</p>
+                    </div>
+                    <div className="w-px h-8 bg-border" />
+                    <div>
+                      <p className="text-sm font-bold text-green-700">{formatCurrency(product.revenue)}</p>
+                      <p className="text-[10px] text-muted-foreground -mt-0.5">faturado</p>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Orders */}
       <div className="bg-white border border-border mb-8">

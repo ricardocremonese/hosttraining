@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import shippingRoutes from './routes/shipping.js';
 import paymentRoutes from './routes/payments.js';
 import orderRoutes from './routes/orders.js';
+import marketingRoutes from './routes/marketing.js';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/marketing', marketingRoutes);
 
 // Start
 app.listen(env.port, () => {

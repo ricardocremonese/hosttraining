@@ -186,12 +186,30 @@ export default function OrderList() {
                                 </div>
                               </div>
                               <div>
-                                <p className="text-xs font-bold mb-2">Itens</p>
-                                {order.items?.map((item, idx) => (
-                                  <div key={idx} className="text-xs text-muted-foreground mb-1">
-                                    {item.product_name} — {item.size} × {item.quantity} — R${(item.price * item.quantity).toFixed(2)}
-                                  </div>
-                                ))}
+                                <p className="text-xs font-bold mb-3">Itens</p>
+                                <div className="space-y-3">
+                                  {order.items?.map((item, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={`/products/${item.product_id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3 hover:bg-white/50 p-1.5 -m-1.5 rounded transition-colors group"
+                                    >
+                                      <div className="w-12 h-12 bg-white flex-shrink-0 overflow-hidden border border-border">
+                                        {item.image ? (
+                                          <img src={item.image} alt={item.product_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[8px]">IMG</div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium truncate group-hover:underline">{item.product_name}</p>
+                                        <p className="text-[10px] text-muted-foreground">{item.size} × {item.quantity} — R${(item.price * item.quantity).toFixed(2)}</p>
+                                      </div>
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
                               <div>
                                 <p className="text-xs font-bold mb-2">Endereço de Entrega</p>

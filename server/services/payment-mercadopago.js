@@ -1,78 +1,132 @@
 import axios from 'axios';
-import { env } from '../config/env.js';
 import { supabase } from '../config/supabase.js';
 
 /**
- * Serviço de Pagamento - MercadoPago
- * Ativar quando decidir por MercadoPago
+ * Busca config do MercadoPago no banco
  */
+async function getConfig() {
+  if (!supabase) throw new Error('Supabase não configurado');
+  const { data } = await supabase
+    .from('integrations_config')
+    .select('config, enabled')
+    .eq('provider', 'mercadopago')
+    .single();
 
-const mpClient = axios.create({
-  baseURL: 'https://api.mercadopago.com',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${env.mercadopagoAccessToken}`,
-  },
-});
+  if (!data?.enabled) throw new Error('MercadoPago não está ativo');
+  return data.config;
+}
 
 /**
- * Cria uma preferência de pagamento (redireciona para checkout do MP)
+ * Processa pagamento com cartão via Checkout Transparente (API de Orders)
  */
-export async function criarPreferencia({ orderId, items, customerEmail, customerName }) {
-  const { data } = await mpClient.post('/checkout/preferences', {
-    items: items.map(item => ({
-      title: item.product_name,
-      quantity: item.quantity,
-      unit_price: item.price,
-      currency_id: 'BRL',
-      picture_url: item.image || undefined,
-    })),
+export async function processarPagamentoCartao({ orderId, orderNumber, token, installments, paymentMethodId, payer, transactionAmount }) {
+  const config = await getConfig();
+
+  const { data } = await axios.post('https://api.mercadopago.com/v1/payments', {
+    transaction_amount: transactionAmount,
+    token,
+    installments: installments || 1,
+    payment_method_id: paymentMethodId,
     payer: {
-      email: customerEmail,
-      name: customerName,
+      email: payer.email,
+      identification: {
+        type: 'CPF',
+        number: payer.cpf?.replace(/\D/g, ''),
+      },
     },
     metadata: {
       order_id: orderId,
+      order_number: orderNumber,
     },
-    back_urls: {
-      success: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/checkout/success`,
-      failure: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/checkout`,
-      pending: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/checkout/pending`,
+    description: `Pedido ${orderNumber} - HOST Training`,
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.access_token}`,
+      'X-Idempotency-Key': `${orderId}-${Date.now()}`,
     },
-    auto_return: 'approved',
-    notification_url: `${process.env.API_URL || 'http://localhost:3001'}/api/payments/mercadopago/webhook`,
   });
 
+  // Atualizar status no banco
+  if (data.status === 'approved') {
+    await supabase.from('orders').update({
+      payment_status: 'paid',
+      status: 'confirmed',
+      updated_date: new Date().toISOString(),
+    }).eq('id', orderId);
+  } else if (data.status === 'pending' || data.status === 'in_process') {
+    await supabase.from('orders').update({
+      payment_status: 'pending',
+      updated_date: new Date().toISOString(),
+    }).eq('id', orderId);
+  }
+
   return {
-    preferenceId: data.id,
-    initPoint: data.init_point,
-    sandboxInitPoint: data.sandbox_init_point,
+    status: data.status,
+    status_detail: data.status_detail,
+    payment_id: data.id,
   };
 }
 
 /**
- * Processa webhook/IPN do MercadoPago
+ * Gera pagamento via Pix
+ */
+export async function gerarPix({ orderId, orderNumber, payer, transactionAmount }) {
+  const config = await getConfig();
+
+  const { data } = await axios.post('https://api.mercadopago.com/v1/payments', {
+    transaction_amount: transactionAmount,
+    payment_method_id: 'pix',
+    payer: {
+      email: payer.email,
+      identification: {
+        type: 'CPF',
+        number: payer.cpf?.replace(/\D/g, ''),
+      },
+    },
+    metadata: {
+      order_id: orderId,
+      order_number: orderNumber,
+    },
+    description: `Pedido ${orderNumber} - HOST Training`,
+  }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.access_token}`,
+      'X-Idempotency-Key': `pix-${orderId}-${Date.now()}`,
+    },
+  });
+
+  return {
+    status: data.status,
+    payment_id: data.id,
+    qr_code: data.point_of_interaction?.transaction_data?.qr_code,
+    qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64,
+    ticket_url: data.point_of_interaction?.transaction_data?.ticket_url,
+  };
+}
+
+/**
+ * Webhook do MercadoPago
  */
 export async function processarWebhookMercadoPago(body) {
-  if (body.type === 'payment') {
+  if (body.type === 'payment' || body.action === 'payment.updated') {
     const paymentId = body.data?.id;
     if (!paymentId) return { received: true };
 
-    // Buscar detalhes do pagamento
-    const { data: payment } = await mpClient.get(`/v1/payments/${paymentId}`);
-    const orderId = payment.metadata?.order_id;
+    const config = await getConfig();
+    const { data: payment } = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { 'Authorization': `Bearer ${config.access_token}` },
+    });
 
+    const orderId = payment.metadata?.order_id;
     if (orderId && payment.status === 'approved') {
-      await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'confirmed',
-          updated_date: new Date().toISOString(),
-        })
-        .eq('id', orderId);
+      await supabase.from('orders').update({
+        payment_status: 'paid',
+        status: 'confirmed',
+        updated_date: new Date().toISOString(),
+      }).eq('id', orderId);
     }
   }
-
   return { received: true };
 }

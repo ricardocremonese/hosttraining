@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/lib/CartContext';
 import { base44 } from '@/api/base44Client';
 import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { cpf as cpfValidator } from 'cpf-cnpj-validator';
+import MercadoPagoForm from '@/components/checkout/MercadoPagoForm';
+import StripeForm from '@/components/checkout/StripeForm';
 
 const steps = ['Informações', 'Entrega', 'Pagamento'];
 
@@ -35,14 +37,75 @@ export default function Checkout() {
   const [step, setStep] = useState(0);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [paymentProvider, setPaymentProvider] = useState(null);
+  const [paymentPublicKey, setPaymentPublicKey] = useState('');
+  const [paymentError, setPaymentError] = useState('');
   const [cpfError, setCpfError] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
   const [form, setForm] = useState({
     customer_name: '', customer_email: '', customer_phone: '', customer_cpf: '',
     street: '', complement: '', city: '', state: '', zip: '', country: 'BR',
   });
 
-  const shipping = subtotal >= 300 ? 0 : 19.99;
-  const total = subtotal + shipping;
+  // Carregar provedor de pagamento ativo
+  useEffect(() => {
+    fetch('/api/payments/active-provider')
+      .then(r => r.json())
+      .then(data => {
+        setPaymentProvider(data.provider);
+        setPaymentPublicKey(data.publicKey || '');
+      })
+      .catch(() => {});
+  }, []);
+
+  const baseShipping = subtotal >= 300 ? 0 : 19.99;
+  const shipping = appliedCoupon?.free_shipping ? 0 : baseShipping;
+
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percentage') {
+      discount = subtotal * (appliedCoupon.value / 100);
+    } else {
+      discount = appliedCoupon.value;
+    }
+    discount = Math.min(discount, subtotal);
+  }
+  const total = subtotal - discount + shipping;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const results = await base44.entities.Coupon.filter({ code: couponCode.trim().toUpperCase(), active: true });
+      const coupon = results[0];
+      if (!coupon) {
+        setCouponError('Cupom não encontrado');
+      } else if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        setCouponError('Cupom expirado');
+      } else if (coupon.max_uses > 0 && (coupon.used_count || 0) >= coupon.max_uses) {
+        setCouponError('Cupom esgotado');
+      } else if (coupon.min_order > 0 && subtotal < coupon.min_order) {
+        setCouponError(`Pedido mínimo: R$${coupon.min_order.toFixed(2)}`);
+      } else {
+        setAppliedCoupon(coupon);
+        setCouponError('');
+      }
+    } catch {
+      setCouponError('Erro ao verificar cupom');
+    }
+    setCouponLoading(false);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  };
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -101,7 +164,30 @@ export default function Checkout() {
   const requiredFields = ['customer_name', 'customer_email', 'street', 'city', 'state', 'zip'];
   const isFormValid = requiredFields.every(field => form[field]?.trim()) && isCpfComplete && isPhoneComplete;
 
-  const handlePlaceOrder = async () => {
+  // Cria pedido pendente antes do pagamento
+  const handleCreateOrder = async () => {
+    const orderCode = `HT-${Date.now().toString(36).toUpperCase()}`;
+    const order = await base44.entities.Order.create({
+      order_number: orderCode,
+      items,
+      customer_name: form.customer_name,
+      customer_email: form.customer_email,
+      customer_phone: form.customer_phone,
+      customer_cpf: form.customer_cpf,
+      shipping_address: {
+        street: form.street, complement: form.complement, city: form.city,
+        state: form.state, zip: form.zip, country: form.country,
+      },
+      subtotal, shipping_cost: shipping, total,
+      status: 'pending', payment_status: 'pending',
+    });
+    setCreatedOrder({ ...order, total, customer_email: form.customer_email, customer_cpf: form.customer_cpf });
+    setOrderNumber(orderCode);
+    setStep(2);
+  };
+
+  // Fallback: pedido sem gateway (quando nenhum provedor ativo)
+  const handlePlaceOrderDirect = async () => {
     const orderCode = `HT-${Date.now().toString(36).toUpperCase()}`;
     await base44.entities.Order.create({
       order_number: orderCode,
@@ -115,11 +201,21 @@ export default function Checkout() {
         state: form.state, zip: form.zip, country: form.country,
       },
       subtotal, shipping_cost: shipping, total,
-      status: 'pending', payment_status: 'paid',
+      status: 'pending', payment_status: 'pending',
     });
     setOrderNumber(orderCode);
     clearCart();
     setOrderPlaced(true);
+  };
+
+  const handlePaymentSuccess = (data) => {
+    setPaymentError('');
+    clearCart();
+    setOrderPlaced(true);
+  };
+
+  const handlePaymentError = (msg) => {
+    setPaymentError(msg || 'Erro ao processar pagamento. Tente novamente.');
   };
 
   if (orderPlaced) {
@@ -230,7 +326,10 @@ export default function Checkout() {
                   </div>
                   <p className="text-sm font-medium">{shipping === 0 ? 'Grátis' : `R$${shipping.toFixed(2)}`}</p>
                 </div>
-                <button onClick={() => setStep(2)} className="mt-4 w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors">
+                <button
+                  onClick={paymentProvider ? handleCreateOrder : handlePlaceOrderDirect}
+                  className="mt-4 w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors"
+                >
                   Continuar para Pagamento
                 </button>
               </motion.div>
@@ -239,16 +338,44 @@ export default function Checkout() {
             {step === 2 && (
               <motion.div key="pay" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                 <h2 className="text-lg font-bold mb-6">Pagamento</h2>
-                <div className="space-y-4 mb-8">
-                  <input placeholder="Número do Cartão" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input placeholder="MM / AA" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
-                    <input placeholder="CVV" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+
+                {paymentError && (
+                  <div className="bg-red-50 border border-red-200 px-4 py-3 mb-6">
+                    <p className="text-sm text-red-700">{paymentError}</p>
                   </div>
-                </div>
-                <button onClick={handlePlaceOrder} className="w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors">
-                  Finalizar Pedido — R${total.toFixed(2)}
-                </button>
+                )}
+
+                {paymentProvider === 'mercadopago' && createdOrder && (
+                  <MercadoPagoForm
+                    publicKey={paymentPublicKey}
+                    order={createdOrder}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                )}
+
+                {paymentProvider === 'stripe' && createdOrder && (
+                  <StripeForm
+                    publicKey={paymentPublicKey}
+                    order={createdOrder}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                )}
+
+                {!paymentProvider && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Nenhum provedor de pagamento configurado. O pedido será registrado como pendente.
+                    </p>
+                    <button
+                      onClick={handlePlaceOrderDirect}
+                      className="w-full bg-foreground text-background py-4 text-sm font-medium hover:bg-foreground/90 transition-colors"
+                    >
+                      Finalizar Pedido — R${total.toFixed(2)}
+                    </button>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -272,14 +399,56 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
+            {/* Coupon */}
+            <div className="border-t border-border pt-4 mb-4">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 px-3 py-2">
+                  <div>
+                    <p className="text-xs font-medium text-green-700">Cupom: {appliedCoupon.code}</p>
+                    <p className="text-[10px] text-green-600">
+                      {appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}% de desconto` : `R$${appliedCoupon.value?.toFixed(2)} de desconto`}
+                      {appliedCoupon.free_shipping ? ' + Frete Grátis' : ''}
+                    </p>
+                  </div>
+                  <button onClick={removeCoupon} className="text-xs text-green-700 underline">Remover</button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                      placeholder="Cupom de desconto"
+                      className="flex-1 border border-border px-3 py-2 text-xs outline-none focus:border-foreground font-mono uppercase"
+                    />
+                    <button onClick={applyCoupon} disabled={couponLoading || !couponCode.trim()} className="px-3 py-2 text-xs font-medium bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50">
+                      {couponLoading ? '...' : 'Aplicar'}
+                    </button>
+                  </div>
+                  {couponError && <p className="text-[10px] text-destructive mt-1">{couponError}</p>}
+                </div>
+              )}
+            </div>
+
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium">R${subtotal.toFixed(2)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-green-600">Desconto</span>
+                  <span className="font-medium text-green-600">-R${discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Frete</span>
-                <span className="font-medium">{shipping === 0 ? 'Grátis' : `R$${shipping.toFixed(2)}`}</span>
+                <span className="font-medium">
+                  {shipping === 0 ? (
+                    <span className={appliedCoupon?.free_shipping ? 'text-green-600' : ''}>Grátis</span>
+                  ) : `R$${shipping.toFixed(2)}`}
+                </span>
               </div>
               <div className="flex justify-between text-sm font-bold pt-2 border-t border-border">
                 <span>Total</span>
