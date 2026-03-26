@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_email TEXT,
   customer_phone TEXT,
   customer_cpf TEXT,
+  customer_birthday DATE,
   shipping_address JSONB,
   subtotal NUMERIC(10,2) DEFAULT 0,
   shipping_cost NUMERIC(10,2) DEFAULT 0,

@@ -47,7 +47,7 @@ export default function Checkout() {
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [form, setForm] = useState({
-    customer_name: '', customer_email: '', customer_phone: '', customer_cpf: '',
+    customer_name: '', customer_email: '', customer_phone: '', customer_cpf: '', customer_birthday: '',
     street: '', number: '', complement: '', observation: '', city: '', state: '', zip: '', country: 'BR',
   });
 
@@ -173,6 +173,7 @@ export default function Checkout() {
       customer_email: form.customer_email,
       customer_phone: form.customer_phone,
       customer_cpf: form.customer_cpf,
+      customer_birthday: form.customer_birthday || null,
       shipping_address: {
         street: form.street, number: form.number, complement: form.complement,
         observation: form.observation, city: form.city,
@@ -196,6 +197,7 @@ export default function Checkout() {
       customer_email: form.customer_email,
       customer_phone: form.customer_phone,
       customer_cpf: form.customer_cpf,
+      customer_birthday: form.customer_birthday || null,
       shipping_address: {
         street: form.street, number: form.number, complement: form.complement,
         observation: form.observation, city: form.city,
@@ -291,6 +293,10 @@ export default function Checkout() {
                   </div>
                   <input name="customer_email" value={form.customer_email} onChange={handleChange} placeholder="E-mail *" type="email" className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${!form.customer_email.trim() && form.customer_email !== '' ? 'border-destructive' : 'border-border'}`} />
                   <input name="customer_phone" value={form.customer_phone} onChange={handlePhoneChange} placeholder="WhatsApp *  (11)99999-9999" inputMode="numeric" maxLength={14} className={`w-full border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors ${phoneDigits.length > 0 && !isPhoneComplete ? 'border-destructive' : 'border-border'}`} />
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Data de Aniversário</label>
+                    <input name="customer_birthday" value={form.customer_birthday} onChange={handleChange} type="date" className="w-full border border-border px-4 py-3 text-sm outline-none focus:border-foreground transition-colors" />
+                  </div>
                 </div>
                 <h2 className="text-lg font-bold mb-6">Endereço de Entrega</h2>
                 <div className="space-y-4">

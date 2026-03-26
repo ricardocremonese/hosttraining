@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Image, Newspaper, LayoutGrid, Plug, Megaphone, Ticket, Mail, ShoppingBag, Sparkles, ChevronDown, ChevronRight, MessageCircle, Cake } from 'lucide-react';
 import Logo from '../store/NikeLogo';
 
 const navItems = [
@@ -20,6 +20,8 @@ const marketingItems = [
   { label: 'Campanhas', href: '/admin/marketing/campaigns', icon: Megaphone },
   { label: 'Cupons', href: '/admin/marketing/coupons', icon: Ticket },
   { label: 'Follow-Up', href: '/admin/marketing/followup', icon: ShoppingBag },
+  { label: 'WhatsApp', href: '/admin/marketing/whatsapp', icon: MessageCircle },
+  { label: 'Aniversariantes', href: '/admin/marketing/birthdays', icon: Cake },
   { label: 'IA Conteúdo', href: '/admin/marketing/ai', icon: Sparkles },
 ];
 

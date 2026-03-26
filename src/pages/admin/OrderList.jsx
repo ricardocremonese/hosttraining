@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChevronDown, ChevronUp, Search, Copy, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Copy, Check, Printer } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const statusOptions = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
@@ -27,12 +27,112 @@ export default function OrderList() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.Order.update(id, { status }),
+    mutationFn: ({ id, status }) => {
+      const paymentMap = { confirmed: 'paid', shipped: 'paid', delivered: 'paid', cancelled: 'refunded', pending: 'pending' };
+      return base44.entities.Order.update(id, { status, payment_status: paymentMap[status] || 'pending' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-orders-sidebar'] });
     },
   });
+
+  const printLabel = (order) => {
+    const addr = order.shipping_address || {};
+    const date = new Date(order.created_date).toLocaleDateString('pt-BR');
+    const itemsHtml = (order.items || []).map(item =>
+      `<div class="item">• ${item.product_name} — ${item.size || ''} × ${item.quantity}</div>`
+    ).join('');
+
+    const labelBlock = (copyLabel) => `
+      <div class="label">
+        <div class="header">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h1>HOST Training</h1>
+            <span class="copy-badge">${copyLabel}</span>
+          </div>
+          <p>CNPJ: 63.443.407/0001-03 | hosttraining.com.br | @hosttraining</p>
+        </div>
+        <div class="columns">
+          <div class="col">
+            <div class="title">Remetente</div>
+            <div class="name">HOST Training</div>
+            <div class="line">CNPJ: 63.443.407/0001-03</div>
+            <div class="line">hosttraining.com.br</div>
+            <div class="line">WhatsApp: (11) 99593-3974</div>
+          </div>
+          <div class="col">
+            <div class="title">Destinatário</div>
+            <div class="name">${order.customer_name || ''}</div>
+            <div class="line">${addr.street || ''}${addr.number ? ', ' + addr.number : ''}</div>
+            ${addr.complement ? `<div class="line">${addr.complement}</div>` : ''}
+            <div class="line">${addr.city || ''}, ${addr.state || ''} — CEP ${addr.zip || ''}</div>
+            ${order.customer_phone ? `<div class="line">Tel: ${order.customer_phone}</div>` : ''}
+            ${order.customer_cpf ? `<div class="line">CPF: ${order.customer_cpf}</div>` : ''}
+          </div>
+        </div>
+        ${addr.observation ? `<div class="obs-row"><strong>OBS:</strong> ${addr.observation}</div>` : ''}
+        <div class="bottom">
+          <div class="items-col">
+            <div class="title">Itens</div>
+            ${itemsHtml}
+          </div>
+          <div class="code-col">
+            <div class="code">${order.order_number || ''}</div>
+            <div class="sub">Data: ${date}</div>
+            <div class="sub">Rastreio: hosttraining.com.br/rastreio</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html><head><meta charset="UTF-8">
+      <title>Etiqueta ${order.order_number}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: A4; margin: 10mm; }
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #111; }
+        .page { width: 100%; display: flex; flex-direction: column; gap: 8px; height: 100vh; }
+        .label { border: 2px solid #111; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #111; color: #fff; padding: 8px 14px; }
+        .header h1 { font-size: 16px; color: #F5921B; margin: 0; }
+        .header p { font-size: 8px; color: #999; margin-top: 2px; }
+        .copy-badge { background: #F5921B; color: #fff; font-size: 9px; font-weight: bold; padding: 2px 8px; letter-spacing: 1px; }
+        .columns { display: flex; border-top: 1px dashed #111; }
+        .col { flex: 1; padding: 10px 14px; }
+        .col + .col { border-left: 1px dashed #111; }
+        .title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 6px; }
+        .name { font-size: 14px; font-weight: bold; margin-bottom: 3px; }
+        .line { font-size: 11px; margin-bottom: 1px; }
+        .obs-row { background: #fff8e1; border-top: 1px dashed #111; padding: 6px 14px; font-size: 11px; }
+        .bottom { display: flex; border-top: 1px dashed #111; }
+        .items-col { flex: 1; padding: 10px 14px; }
+        .code-col { width: 180px; border-left: 1px dashed #111; padding: 10px 14px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .code { font-size: 18px; font-weight: bold; font-family: monospace; letter-spacing: 2px; }
+        .sub { font-size: 8px; color: #666; margin-top: 2px; }
+        .item { font-size: 10px; margin-bottom: 1px; }
+        .cut-line { border-top: 2px dashed #999; margin: 0; position: relative; }
+        .cut-line::after { content: '✂ corte aqui'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 8px; font-size: 8px; color: #999; }
+        .no-print { text-align: center; padding: 12px; }
+        @media print { .no-print { display: none; } body { padding: 0; } }
+      </style></head><body>
+      <div class="no-print">
+        <button onclick="window.print()" style="padding:10px 32px;font-size:14px;font-weight:bold;cursor:pointer;background:#111;color:#fff;border:none;">
+          Imprimir Etiqueta
+        </button>
+      </div>
+      <div class="page">
+        ${labelBlock('ENVIO')}
+        <div class="cut-line"></div>
+        ${labelBlock('CONTROLE LOGÍSTICA')}
+      </div>
+      </body></html>
+    `);
+    win.document.close();
+  };
 
   const filtered = useMemo(() => {
     let result = orders;
@@ -231,7 +331,24 @@ export default function OrderList() {
                               </div>
                               <div>
                                 <p className="text-xs font-bold mb-2">Pagamento</p>
-                                <p className="text-xs text-muted-foreground capitalize">{order.payment_status === 'paid' ? 'Pago' : order.payment_status}</p>
+                                <span className={`text-xs px-2 py-1 font-medium ${
+                                  order.payment_status === 'paid' ? 'bg-green-50 text-green-700' :
+                                  order.payment_status === 'refunded' ? 'bg-red-50 text-red-700' :
+                                  'bg-yellow-50 text-yellow-700'
+                                }`}>
+                                  {order.payment_status === 'paid' ? 'Pago' : order.payment_status === 'refunded' ? 'Reembolsado' : 'Pendente'}
+                                </span>
+
+                                {/* Print Label */}
+                                <div className="mt-4">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); printLabel(order); }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                    Imprimir Etiqueta
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </motion.div>
