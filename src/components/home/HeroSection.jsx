@@ -5,16 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const defaultSlide = {
-  id: 'default',
-  subtitle: 'Supere Seus Limites',
-  title: 'HOST Training',
-  description: 'Equipamentos e roupas de alta performance para treinos que transformam.',
-  button_text: 'Compre Agora',
-  button_link: '/products',
-  media_type: 'image',
-  media_url: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=1920&q=80',
-};
 
 export default function HeroSection() {
   const [current, setCurrent] = useState(0);
@@ -27,7 +17,7 @@ export default function HeroSection() {
     queryFn: () => base44.entities.Banner.filter({ active: true }, 'display_order', 20),
   });
 
-  const slides = banners.length > 0 ? banners : [defaultSlide];
+  const slides = banners;
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -46,6 +36,8 @@ export default function HeroSection() {
   useEffect(() => {
     setCurrent(0);
   }, [banners.length]);
+
+  if (slides.length === 0) return null;
 
   const goTo = (idx) => {
     setDirection(idx > current ? 1 : -1);

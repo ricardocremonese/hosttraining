@@ -1,17 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/store/ProductCard';
 import ProductFilters from '../components/store/ProductFilters';
 
 export default function Products() {
-  const params = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
   const [filters, setFilters] = useState(() => {
     const initial = {};
     if (params.get('category')) initial.category = [params.get('category')];
     return initial;
   });
+
+  // Reagir a mudanças na URL (clique no menu)
+  useEffect(() => {
+    const newParams = new URLSearchParams(location.search);
+    const newFilters = {};
+    if (newParams.get('category')) newFilters.category = [newParams.get('category')];
+    setFilters(newFilters);
+  }, [location.search]);
   const [sort, setSort] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -26,7 +36,7 @@ export default function Products() {
     if (filters.category?.length > 0) {
       result = result.filter(p => filters.category.includes(p.category));
     }
-    if (params.get('sale') === 'true') {
+    if (new URLSearchParams(location.search).get('sale') === 'true') {
       result = result.filter(p => p.sale_price && p.sale_price < p.price);
     }
 
@@ -38,18 +48,22 @@ export default function Products() {
   }, [products, filters, sort]);
 
   const activeFilterCount = Object.values(filters).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+  const categoryLabels = { cursos: 'Cursos', armas: 'Armas', suprimentos: 'Suprimentos', acessorios: 'Acessórios', vestuario: 'Vestuário', protecao: 'Proteção', cutelaria: 'Cutelaria' };
+  const activeCategory = params.get('category');
+  const isSale = new URLSearchParams(location.search).get('sale') === 'true';
+  const pageTitle = isSale ? 'Promoções' : activeCategory ? (categoryLabels[activeCategory] || activeCategory) : 'Todos os Produtos';
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 lg:px-12 py-8">
       {/* Breadcrumb */}
       <div className="text-xs text-muted-foreground mb-6">
-        <span>Início</span> <span className="mx-1">/</span> <span className="text-foreground font-medium">Todos os Produtos</span>
+        <span>Início</span> <span className="mx-1">/</span> <span className="text-foreground font-medium">{pageTitle}</span>
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold tracking-tight">
-          Todos os Produtos
+          {pageTitle}
           <span className="text-sm font-normal text-muted-foreground ml-2">({filteredProducts.length})</span>
         </h1>
         <div className="flex items-center gap-4">
