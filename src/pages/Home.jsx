@@ -10,8 +10,8 @@ export default function Home() {
       <div className="pt-[100px]">
         <HeroSection />
       </div>
-      <FeaturedProducts />
       <EditorialSection />
+      <FeaturedProducts />
       <CategoryTiles />
     </div>
   );
